@@ -1,4 +1,4 @@
-FROM node:latest as node
+FROM node:latest as build-stage
 
 ARG ENV=prod
 ARG APP=frontend
@@ -6,16 +6,15 @@ ENV ENV ${ENV}
 ENV APP ${APP}
 
 WORKDIR /app
+COPY package*.json /app/
+
+# Instala y construye el React App
+RUN npm install
 COPY ./ /app/
+RUN npm run build
 
-# Instala y construye el Angular App
-RUN npm ci
-RUN npm run build --prod
-RUN mv /app/dist/${APP}/* /app/dist/
+# React app construida, la vamos a hostear un server production, este es Nginx
 
-# Angular app construida, la vamos a hostear un server production, este es Nginx
-
-FROM nginx:1.13.8-alpine
-
-COPY --from=node /app/dist/ /usr/share/nginx/html
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+FROM nginx:1.15
+COPY --from=build-stage /app/build/ /usr/share/nginx/html
+#COPY --from=build-stage /nginx.conf /etc/nginx/conf.d/default.conf
